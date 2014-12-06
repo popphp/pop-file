@@ -1,14 +1,13 @@
 {
     "name": "popphp/pop-file",
-    "description": "Pop File Component for Pop PHP Framework 2",
+    "description": "Pop File Component for Pop PHP Framework",
     "keywords": [
         "file uploads",
         "directory",
         "directory traversing",
         "php",
         "pop",
-        "pop php",
-        "pop php 2"
+        "pop php"
     ],
     "homepage": "http://www.popphp.org/",
     "license": "New BSD",
@@ -25,6 +24,11 @@
     "autoload": {
         "psr-4": {
             "Pop\\File\\": "src/"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "2.0.x-dev"
         }
     }
 }
