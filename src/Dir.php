@@ -187,12 +187,16 @@ class Dir
      * Empty an entire directory.
      *
      * @param  boolean $remove
+     * @param  string  $path
      * @return void
      */
-    public function emptyDir($remove = false)
+    public function emptyDir($remove = false, $path = null)
     {
+        if (null === $path) {
+            $path = $this->path;
+        }
         // Get a directory handle.
-        if (!$dh = @opendir($this->path)) {
+        if (!$dh = @opendir($path)) {
             return;
         }
 
@@ -201,8 +205,8 @@ class Dir
             if ($obj == '.' || $obj == '..') {
                 continue;
             }
-            if (!@unlink($this->path . DIRECTORY_SEPARATOR . $obj)) {
-                $this->emptyDir(true, $this->path . DIRECTORY_SEPARATOR . $obj);
+            if (!@unlink($path . DIRECTORY_SEPARATOR . $obj)) {
+                $this->emptyDir(true, $path . DIRECTORY_SEPARATOR . $obj);
             }
         }
 
@@ -211,7 +215,7 @@ class Dir
 
         // If the delete flag was passed, remove the top level directory.
         if ($remove) {
-            @rmdir($this->path);
+            @rmdir($path);
         }
     }
 
