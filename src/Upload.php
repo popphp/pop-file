@@ -29,149 +29,230 @@ class Upload
 {
 
     /**
-     * Array of allowed file types.
-     * @var array
+     * The upload directory path
+     * @var string
      */
-    protected static $allowedTypes = [
-        'afm'    => 'application/x-font-afm',
-        'ai'     => 'application/postscript',
-        'aif'    => 'audio/x-aiff',
-        'aiff'   => 'audio/x-aiff',
-        'avi'    => 'video/x-msvideo',
-        'bmp'    => 'image/x-ms-bmp',
-        'bz2'    => 'application/bzip2',
-        'css'    => 'text/css',
-        'csv'    => 'text/csv',
-        'doc'    => 'application/msword',
-        'docx'   => 'application/msword',
-        'eps'    => 'application/octet-stream',
-        'fla'    => 'application/octet-stream',
-        'flv'    => 'application/octet-stream',
-        'gif'    => 'image/gif',
-        'gz'     => 'application/x-gzip',
-        'html'   => 'text/html',
-        'htm'    => 'text/html',
-        'jpe'    => 'image/jpeg',
-        'jpg'    => 'image/jpeg',
-        'jpeg'   => 'image/jpeg',
-        'js'     => 'text/plain',
-        'json'   => 'text/plain',
-        'log'    => 'text/plain',
-        'md'     => 'text/plain',
-        'mov'    => 'video/quicktime',
-        'mp2'    => 'audio/mpeg',
-        'mp3'    => 'audio/mpeg',
-        'mp4'    => 'video/mp4',
-        'mpg'    => 'video/mpeg',
-        'mpeg'   => 'video/mpeg',
-        'otf'    => 'application/x-font-otf',
-        'pdf'    => 'application/pdf',
-        'pfb'    => 'application/x-font-pfb',
-        'pfm'    => 'application/x-font-pfm',
-        'pgsql'  => 'text/plain',
-        'phar'   => 'application/x-phar',
-        'php'    => 'text/plain',
-        'php3'   => 'text/plain',
-        'phtml'  => 'text/plain',
-        'png'    => 'image/png',
-        'ppt'    => 'application/msword',
-        'pptx'   => 'application/msword',
-        'psb'    => 'image/x-photoshop',
-        'psd'    => 'image/x-photoshop',
-        'rar'    => 'application/x-rar-compressed',
-        'shtml'  => 'text/html',
-        'shtm'   => 'text/html',
-        'sit'    => 'application/x-stuffit',
-        'sitx'   => 'application/x-stuffit',
-        'sql'    => 'text/plain',
-        'sqlite' => 'application/octet-stream',
-        'svg'    => 'image/svg+xml',
-        'swf'    => 'application/x-shockwave-flash',
-        'tar'    => 'application/x-tar',
-        'tbz'    => 'application/bzip2',
-        'tbz2'   => 'application/bzip2',
-        'tgz'    => 'application/x-gzip',
-        'tif'    => 'image/tiff',
-        'tiff'   => 'image/tiff',
-        'tsv'    => 'text/tsv',
-        'ttf'    => 'application/x-font-ttf',
-        'txt'    => 'text/plain',
-        'wav'    => 'audio/x-wav',
-        'wma'    => 'audio/x-ms-wma',
-        'wmv'    => 'audio/x-ms-wmv',
-        'xls'    => 'application/msword',
-        'xlsx'   => 'application/msword',
-        'xhtml'  => 'application/xhtml+xml',
-        'xml'    => 'application/xml',
-        'yaml'   => 'text/plain',
-        'yml'    => 'text/plain',
-        'zip'    => 'application/x-zip'
-    ];
+    protected $uploadDir = null;
 
     /**
-     * Static method to upload a file and return it
+     * The final full path of the uploaded
+     * @var string
+     */
+    protected $uploadedFile = null;
+
+    /**
+     * Allowed maximum file size
+     * @var int
+     */
+    protected $maxSize = 0;
+
+    /**
+     * Allowed file types
+     * @var array
+     */
+    protected $allowedTypes = [];
+
+    /**
+     * Overwrite flag
+     * @var boolean
+     */
+    protected $overwrite = false;
+
+    /**
+     * Constructor
      *
-     * @param  string $upload
-     * @param  string $file
+     * Instantiate a file upload object
+     *
+     * @param  string $dir
      * @param  int    $maxSize
      * @param  array  $allowedTypes
-     * @throws Exception
-     * @return string
+     * @return Upload
      */
-    public static function upload($upload, $file, $maxSize = 0, $allowedTypes = null)
+    public function __construct($dir, $maxSize = 0, array $allowedTypes = null)
     {
-        // Check to see if the upload directory exists.
-        if (!file_exists(dirname($file))) {
-            throw new Exception('Error: The upload directory does not exist.');
-        }
+        $this->setUploadDir($dir);
+        $this->setMaxSize($maxSize);
 
-        // Check to see if the permissions are set correctly.
-        if (!is_writable(dirname($file))) {
-            throw new Exception('Error: Permission denied. The upload directory is not writable.');
-        }
-
-        // Move the uploaded file, creating a file object with it.
-        if (move_uploaded_file($upload, $file)) {
-            $fileSize  = filesize($file);
-            $fileParts = pathinfo($file);
-
-            $ext = (isset($fileParts['extension'])) ? $fileParts['extension'] : null;
-
-            // Check the file size requirement.
-            if (((int)$maxSize > 0) && ($fileSize > $maxSize)) {
-                unlink($file);
-                throw new Exception('Error: The file uploaded is too big.');
-            }
-
-            if (null === $allowedTypes) {
-                $allowedTypes = self::$allowedTypes;
-            }
-
-            // Check to see if the file is an accepted file format.
-            if ((null !== $ext) && (count($allowedTypes) > 0) && (!array_key_exists(strtolower($ext), $allowedTypes))) {
-                throw new Exception('Error: The file type ' . strtoupper($ext) . ' is not an accepted file format.');
-            }
-
-            return $file;
-        } else {
-            throw new Exception('Error: There was an error in uploading the file.');
+        if ((null !== $allowedTypes) && (count($allowedTypes) > 0)) {
+            $this->setAllowedTypes($allowedTypes);
         }
     }
 
     /**
-     * Static method to check for a duplicate file, returning
-     * the next incremented filename, i.e. filename_1.txt
+     * Use default file upload settings
      *
-     * @param  string $file
-     * @param  string $dir
-     * @return string
+     * @param  int $maxSize
+     * @return Upload
      */
-    public static function checkForDuplicate($file, $dir = null)
+    public function useDefaults($maxSize = 10000000)
     {
-        if (null === $dir) {
-            $dir = getcwd();
+        $this->maxSize      = (int)$maxSize;
+        $this->allowedTypes = [
+            'ai', 'aif', 'aiff', 'avi', 'bmp', 'bz2', 'csv', 'doc', 'docx', 'eps', 'fla', 'flv', 'gif', 'gz',
+            'jpe','jpg', 'jpeg', 'json', 'log', 'md', 'mov', 'mp2', 'mp3', 'mp4', 'mpg', 'mpeg', 'otf', 'pdf',
+            'png', 'ppt', 'pptx', 'psd', 'rar', 'sql', 'sqlite', 'svg', 'swf', 'tar', 'tbz', 'tbz2', 'tgz',
+            'tif', 'tiff', 'tsv', 'ttf', 'txt', 'wav', 'wma', 'wmv', 'xls', 'xlsx', 'xml', 'yaml', 'yml', 'zip'
+        ];
+        return $this;
+    }
+
+    /**
+     * Set the upload directory
+     *
+     * @param  string $dir
+     * @throws Exception
+     * @return Upload
+     */
+    public function setUploadDir($dir)
+    {
+        // Check to see if the upload directory exists.
+        if (!file_exists($dir)) {
+            throw new Exception('Error: The upload directory does not exist.');
         }
 
+        // Check to see if the permissions are set correctly.
+        if (!is_writable(dirname($dir))) {
+            throw new Exception('Error: The upload directory is not writable.');
+        }
+
+        $this->uploadDir = $dir;
+        return $this;
+    }
+
+    /**
+     * Set the upload directory
+     *
+     * @param  int $maxSize
+     * @return Upload
+     */
+    public function setMaxSize($maxSize)
+    {
+        $this->maxSize = (int)$maxSize;
+        return $this;
+    }
+
+    /**
+     * Set the allowed types
+     *
+     * @param  array $allowedTypes
+     * @return Upload
+     */
+    public function setAllowedTypes(array $allowedTypes)
+    {
+        $this->allowedTypes = $allowedTypes;
+        return $this;
+    }
+
+    /**
+     * Add an allowed type
+     *
+     * @param  string $type
+     * @return Upload
+     */
+    public function addAllowedType($type)
+    {
+        if (!in_array($type, $this->allowedTypes)) {
+            $this->allowedTypes[] = $type;
+        }
+        return $this;
+    }
+
+    /**
+     * Remove an allowed type
+     *
+     * @param  string $type
+     * @return Upload
+     */
+    public function removeAllowedType($type)
+    {
+        if (in_array($type, $this->allowedTypes)) {
+            unset($this->allowedTypes[array_search($type, $this->allowedTypes)]);
+        }
+        return $this;
+    }
+
+    /**
+     * Set the overwrite flag
+     *
+     * @param  boolean $overwrite
+     * @return Upload
+     */
+    public function overwrite($overwrite)
+    {
+        $this->overwrite = (bool)$overwrite;
+        return $this;
+    }
+
+    /**
+     * Get the upload directory
+     *
+     * @return string
+     */
+    public function getUploadDir()
+    {
+        return $this->uploadDir;
+    }
+
+    /**
+     * Get uploaded file
+     *
+     * @return string
+     */
+    public function getUploadedFile()
+    {
+        return $this->uploadedFile;
+    }
+
+    /**
+     * Get the allowed max size
+     *
+     * @return int
+     */
+    public function getMaxSize()
+    {
+        return $this->maxSize;
+    }
+
+    /**
+     * Get the allowed file types
+     *
+     * @return array
+     */
+    public function getAllowedTypes()
+    {
+        return $this->allowedTypes;
+    }
+
+    /**
+     * Determine if a file type is allowed
+     *
+     * @param  string $ext
+     * @return boolean
+     */
+    public function isAllowed($ext)
+    {
+        return ((count($this->allowedTypes) == 0) ||
+            ((count($this->allowedTypes) > 0) && (in_array(strtolower($ext), $this->allowedTypes))));
+    }
+
+    /**
+     * Determine if the overwrite flag is set
+     *
+     * @return boolean
+     */
+    public function isOverwrite()
+    {
+        return $this->overwrite;
+    }
+
+    /**
+     * Check filename for duplicates
+     *
+     * @param  string $file
+     * @return string
+     */
+    public function checkFilename($file)
+    {
         $newFilename  = $file;
         $parts        = pathinfo($file);
         $origFilename = $parts['filename'];
@@ -179,12 +260,54 @@ class Upload
 
         $i = 1;
 
-        while (file_exists($dir . DIRECTORY_SEPARATOR . $newFilename)) {
+        while (file_exists($this->uploadDir . DIRECTORY_SEPARATOR . $newFilename)) {
             $newFilename = $origFilename . '_' . $i . $ext;
             $i++;
         }
 
         return $newFilename;
+    }
+
+    /**
+     * Upload file to the upload dir, returns full path of the newly uploaded file
+     *
+     * @param  string $src
+     * @param  string $dest
+     * @throws Exception
+     * @return string
+     */
+    public function upload($src, $dest)
+    {
+        if (!$this->overwrite) {
+            $dest = $this->checkFilename($dest);
+        }
+
+        $dest = $this->uploadDir . DIRECTORY_SEPARATOR . $dest;
+
+        // Move the uploaded file, creating a file object with it.
+        if (move_uploaded_file($src, $dest)) {
+            $fileSize  = filesize($dest);
+            $fileParts = pathinfo($dest);
+
+            $ext = (isset($fileParts['extension'])) ? $fileParts['extension'] : null;
+
+            // Check the file size requirement.
+            if (($this->maxSize > 0) && ($fileSize > $this->maxSize)) {
+                unlink($dest);
+                throw new Exception('Error: The file uploaded is too big.');
+            }
+
+            // Check to see if the file is an accepted file format.
+            if ((null !== $ext) && (!$this->isAllowed($ext))) {
+                unlink($dest);
+                throw new Exception('Error: The file type ' . strtoupper($ext) . ' is not an accepted file format.');
+            }
+
+            $this->uploadedFile = realpath($dest);
+            return $this->uploadedFile;
+        } else {
+            throw new Exception('Error: There was an unexpected error in uploading the file.');
+        }
     }
 
 }
