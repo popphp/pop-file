@@ -35,7 +35,7 @@ class Upload
     protected $uploadDir = null;
 
     /**
-     * The final full path of the uploaded
+     * The final filename of the uploaded file
      * @var string
      */
     protected $uploadedFile = null;
@@ -57,6 +57,12 @@ class Upload
      * @var boolean
      */
     protected $overwrite = false;
+
+    /**
+     * Success flag
+     * @var boolean
+     */
+    protected $success = false;
 
     /**
      * Constructor
@@ -204,6 +210,16 @@ class Upload
     }
 
     /**
+     * Get uploaded file full path
+     *
+     * @return string
+     */
+    public function getUploadedFullPath()
+    {
+        return $this->uploadDir . DIRECTORY_SEPARATOR . $this->uploadedFile;
+    }
+
+    /**
      * Get the allowed max size
      *
      * @return int
@@ -246,6 +262,16 @@ class Upload
     }
 
     /**
+     * Determine if the upload was a success
+     *
+     * @return boolean
+     */
+    public function isSuccess()
+    {
+        return $this->success;
+    }
+
+    /**
      * Check filename for duplicates
      *
      * @param  string $file
@@ -282,6 +308,7 @@ class Upload
             $dest = $this->checkFilename($dest);
         }
 
+        $this->uploadedFile = $dest;
         $dest = $this->uploadDir . DIRECTORY_SEPARATOR . $dest;
 
         // Move the uploaded file, creating a file object with it.
@@ -303,7 +330,7 @@ class Upload
                 throw new Exception('Error: The file type ' . strtoupper($ext) . ' is not an accepted file format.');
             }
 
-            $this->uploadedFile = realpath($dest);
+            $this->success = true;
             return $this->uploadedFile;
         } else {
             throw new Exception('Error: There was an unexpected error in uploading the file.');
