@@ -115,7 +115,7 @@ class Dir
                         } else if (!$fileInfo->isDir()) {
                             $f = realpath($fileInfo->getPathname());
                         }
-                        if (null !== $f) {
+                        if (($f !== false) && (null !== $f)) {
                             $this->files[] = $f;
                         }
                     // Else, store only the directory or file name.
