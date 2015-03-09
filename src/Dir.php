@@ -41,6 +41,12 @@ class Dir
     protected $files = [];
 
     /**
+     * The file info objects within the directory
+     * @var array
+     */
+    protected $objects = [];
+
+    /**
      * The nested tree map of the directory and its files
      * @var array
      */
@@ -104,9 +110,12 @@ class Dir
 
         // If the recursive flag is passed, traverse recursively.
         if ($this->rec) {
-            $objects = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($this->path), \RecursiveIteratorIterator::SELF_FIRST);
+            $objects = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($this->path), \RecursiveIteratorIterator::SELF_FIRST
+            );
             foreach ($objects as $fileInfo) {
                 if (($fileInfo->getFilename() != '.') && ($fileInfo->getFilename() != '..')) {
+                    $this->objects[] = $fileInfo;
                     // If full path flag was passed, store the full path.
                     if ($this->full) {
                         $f = null;
@@ -132,10 +141,13 @@ class Dir
         } else {
             foreach (new \DirectoryIterator($this->path) as $fileInfo) {
                 if(!$fileInfo->isDot()) {
+                    $this->objects[] = $fileInfo;
                     // If full path flag was passed, store the full path.
                     if ($this->full) {
                         if ($this->dirs) {
-                            $f = ($fileInfo->isDir()) ? ($this->path . DIRECTORY_SEPARATOR . $fileInfo->getFilename() . DIRECTORY_SEPARATOR) : ($this->path . DIRECTORY_SEPARATOR . $fileInfo->getFilename());
+                            $f = ($fileInfo->isDir()) ?
+                                ($this->path . DIRECTORY_SEPARATOR . $fileInfo->getFilename() . DIRECTORY_SEPARATOR) :
+                                ($this->path . DIRECTORY_SEPARATOR . $fileInfo->getFilename());
                         } else if (!$fileInfo->isDir()) {
                             $f = $this->path . DIRECTORY_SEPARATOR . $fileInfo->getFilename();
                         }
@@ -154,7 +166,7 @@ class Dir
     }
 
     /**
-     * Get the path.
+     * Get the path
      *
      * @return string
      */
@@ -164,7 +176,7 @@ class Dir
     }
 
     /**
-     * Get the files.
+     * Get the files
      *
      * @return array
      */
@@ -174,7 +186,17 @@ class Dir
     }
 
     /**
-     * Get the tree.
+     * Get the objects
+     *
+     * @return array
+     */
+    public function getObjects()
+    {
+        return $this->objects;
+    }
+
+    /**
+     * Get the tree
      *
      * @return array
      */
@@ -184,7 +206,42 @@ class Dir
     }
 
     /**
-     * Empty an entire directory.
+     * Copy an entire directory recursively
+     *
+     * @param  string  $dest
+     * @param  boolean $full
+     * @return void
+     */
+    public function copyDir($dest, $full = true)
+    {
+        if ($full) {
+            if (strpos($this->path, DIRECTORY_SEPARATOR) !== false) {
+                $folder = substr($this->path, (strrpos($this->path, DIRECTORY_SEPARATOR) + 1));
+            } else {
+                $folder = $this->path;
+            }
+
+            if (!file_exists($dest . DIRECTORY_SEPARATOR . $folder)) {
+                mkdir($dest . DIRECTORY_SEPARATOR . $folder);
+            }
+            $dest = $dest . DIRECTORY_SEPARATOR . $folder;
+        }
+
+        foreach (
+            $iterator = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($this->path, \RecursiveDirectoryIterator::SKIP_DOTS),
+                \RecursiveIteratorIterator::SELF_FIRST) as $item
+        ) {
+            if ($item->isDir()) {
+                mkdir($dest . DIRECTORY_SEPARATOR . $iterator->getSubPathName());
+            } else {
+                copy($item, $dest . DIRECTORY_SEPARATOR . $iterator->getSubPathName());
+            }
+        }
+    }
+
+    /**
+     * Empty an entire directory
      *
      * @param  boolean $remove
      * @param  string  $path
