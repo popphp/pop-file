@@ -29,6 +29,39 @@ class Upload
 {
 
     /**
+     * File is too big by the user-defined max size
+     */
+    const UPLOAD_ERR_USER_SIZE = 9;
+
+    /**
+     * File is not allowed, per user-definition
+     */
+    const UPLOAD_ERR_NOT_ALLOWED = 10;
+
+    /**
+     * Unexpected error
+     */
+    const UPLOAD_ERR_UNEXPECTED = 11;
+
+    /**
+     * Error messageed
+     * @var array
+     */
+    protected static $errorMessages = [
+        0  => 'The file uploaded successfully.',
+        1  => 'The uploaded file exceeds the upload_max_filesize directive.',
+        2  => 'The uploaded file exceeds the MAX_FILE_SIZE directive in the HTML form.',
+        3  => 'The uploaded file was only partially uploaded.',
+        4  => 'No file was uploaded.',
+        6  => 'Missing a temporary folder.',
+        7  => 'Failed to write file to disk.',
+        8  => 'A PHP extension stopped the file upload.',
+        9  => 'The uploaded file exceeds the user-defined max file size.',
+        10 => 'The uploaded file is not allowed.',
+        11 => 'Unexpected error.'
+    ];
+
+    /**
      * The upload directory path
      * @var string
      */
@@ -53,16 +86,22 @@ class Upload
     protected $allowedTypes = [];
 
     /**
+     * Disallowed file types
+     * @var array
+     */
+    protected $disallowedTypes = [];
+
+    /**
      * Overwrite flag
      * @var boolean
      */
     protected $overwrite = false;
 
     /**
-     * Success flag
-     * @var boolean
+     * Error flag
+     * @var int
      */
-    protected $success = false;
+    protected $error = 0;
 
     /**
      * Constructor
@@ -71,14 +110,18 @@ class Upload
      *
      * @param  string $dir
      * @param  int    $maxSize
+     * @param  array  $disallowedTypes
      * @param  array  $allowedTypes
      * @return Upload
      */
-    public function __construct($dir, $maxSize = 0, array $allowedTypes = null)
+    public function __construct($dir, $maxSize = 0, array $disallowedTypes = null, array $allowedTypes = null)
     {
         $this->setUploadDir($dir);
         $this->setMaxSize($maxSize);
 
+        if ((null !== $disallowedTypes) && (count($disallowedTypes) > 0)) {
+            $this->setDisallowedTypes($disallowedTypes);
+        }
         if ((null !== $allowedTypes) && (count($allowedTypes) > 0)) {
             $this->setAllowedTypes($allowedTypes);
         }
@@ -87,18 +130,28 @@ class Upload
     /**
      * Use default file upload settings
      *
-     * @param  int $maxSize
      * @return Upload
      */
-    public function useDefaults($maxSize = 10000000)
+    public function useDefaults()
     {
-        $this->maxSize      = (int)$maxSize;
-        $this->allowedTypes = [
+        // Allow basic text, graphic, video, data and archive file types
+        $allowedTypes = [
             'ai', 'aif', 'aiff', 'avi', 'bmp', 'bz2', 'csv', 'doc', 'docx', 'eps', 'fla', 'flv', 'gif', 'gz',
-            'jpe','jpg', 'jpeg', 'json', 'log', 'md', 'mov', 'mp2', 'mp3', 'mp4', 'mpg', 'mpeg', 'otf', 'pdf',
-            'png', 'ppt', 'pptx', 'psd', 'rar', 'sql', 'sqlite', 'svg', 'swf', 'tar', 'tbz', 'tbz2', 'tgz',
-            'tif', 'tiff', 'tsv', 'ttf', 'txt', 'wav', 'wma', 'wmv', 'xls', 'xlsx', 'xml', 'yaml', 'yml', 'zip'
+            'jpe','jpg', 'jpeg', 'log', 'md', 'mov', 'mp2', 'mp3', 'mp4', 'mpg', 'mpeg', 'otf', 'pdf',
+            'png', 'ppt', 'pptx', 'psd', 'rar', 'svg', 'swf', 'tar', 'tbz', 'tbz2', 'tgz', 'tif', 'tiff', 'tsv',
+            'ttf', 'txt', 'wav', 'wma', 'wmv', 'xls', 'xlsx', 'xml', 'zip'
         ];
+
+        // Disallow programming/development file types
+        $disallowedTypes = [
+            'css', 'htm', 'html', 'js', 'json', 'pgsql', 'php', 'php3', 'php4', 'php5', 'sql', 'sqlite', 'yaml', 'yml'
+        ];
+
+        // Set max file size to 10 MBs
+        $this->setMaxSize(10000000);
+        $this->setAllowedTypes($allowedTypes);
+        $this->setDisallowedTypes($disallowedTypes);
+
         return $this;
     }
 
@@ -145,7 +198,23 @@ class Upload
      */
     public function setAllowedTypes(array $allowedTypes)
     {
-        $this->allowedTypes = $allowedTypes;
+        foreach ($allowedTypes as $type) {
+            $this->addAllowedType($type);
+        }
+        return $this;
+    }
+
+    /**
+     * Set the disallowed types
+     *
+     * @param  array $disallowedTypes
+     * @return Upload
+     */
+    public function setDisallowedTypes(array $disallowedTypes)
+    {
+        foreach ($disallowedTypes as $type) {
+            $this->addDisallowedType($type);
+        }
         return $this;
     }
 
@@ -157,8 +226,22 @@ class Upload
      */
     public function addAllowedType($type)
     {
-        if (!in_array($type, $this->allowedTypes)) {
-            $this->allowedTypes[] = $type;
+        if (!in_array(strtolower($type), $this->allowedTypes)) {
+            $this->allowedTypes[] = strtolower($type);
+        }
+        return $this;
+    }
+
+    /**
+     * Add a disallowed type
+     *
+     * @param  string $type
+     * @return Upload
+     */
+    public function addDisallowedType($type)
+    {
+        if (!in_array(strtolower($type), $this->disallowedTypes)) {
+            $this->disallowedTypes[] = strtolower($type);
         }
         return $this;
     }
@@ -171,8 +254,22 @@ class Upload
      */
     public function removeAllowedType($type)
     {
-        if (in_array($type, $this->allowedTypes)) {
-            unset($this->allowedTypes[array_search($type, $this->allowedTypes)]);
+        if (in_array(strtolower($type), $this->allowedTypes)) {
+            unset($this->allowedTypes[array_search(strtolower($type), $this->allowedTypes)]);
+        }
+        return $this;
+    }
+
+    /**
+     * Remove a disallowed type
+     *
+     * @param  string $type
+     * @return Upload
+     */
+    public function removeDisallowedType($type)
+    {
+        if (in_array(strtolower($type), $this->disallowedTypes)) {
+            unset($this->disallowedTypes[array_search(strtolower($type), $this->disallowedTypes)]);
         }
         return $this;
     }
@@ -247,8 +344,26 @@ class Upload
      */
     public function isAllowed($ext)
     {
-        return ((count($this->allowedTypes) == 0) ||
+        $disallowed = ((count($this->disallowedTypes) > 0) && (in_array(strtolower($ext), $this->disallowedTypes)));
+        $allowed    = ((count($this->allowedTypes) == 0) ||
             ((count($this->allowedTypes) > 0) && (in_array(strtolower($ext), $this->allowedTypes))));
+
+        return ((!$disallowed) && ($allowed));
+    }
+
+    /**
+     * Determine if a file type is not allowed
+     *
+     * @param  string $ext
+     * @return boolean
+     */
+    public function isNotAllowed($ext)
+    {
+        $disallowed = ((count($this->disallowedTypes) > 0) && (in_array(strtolower($ext), $this->disallowedTypes)));
+        $allowed    = ((count($this->allowedTypes) == 0) ||
+            ((count($this->allowedTypes) > 0) && (in_array(strtolower($ext), $this->allowedTypes))));
+
+        return (($disallowed) && (!$allowed));
     }
 
     /**
@@ -268,11 +383,41 @@ class Upload
      */
     public function isSuccess()
     {
-        return $this->success;
+        return ($this->error == UPLOAD_ERR_OK);
     }
 
     /**
-     * Check filename for duplicates
+     * Determine if the upload was an error
+     *
+     * @return boolean
+     */
+    public function isError()
+    {
+        return ($this->error != UPLOAD_ERR_OK);
+    }
+
+    /**
+     * Get the upload error code
+     *
+     * @return int
+     */
+    public function getErrorCode()
+    {
+        return $this->error;
+    }
+
+    /**
+     * Get the upload error message
+     *
+     * @return string
+     */
+    public function getErrorMessage()
+    {
+        return self::$errorMessages[$this->error];
+    }
+
+    /**
+     * Check filename for duplicates, returning a new filename appended with _#
      *
      * @param  string $file
      * @return string
@@ -295,45 +440,52 @@ class Upload
     }
 
     /**
-     * Upload file to the upload dir, returns full path of the newly uploaded file
+     * Upload file to the upload dir, returns the newly uploaded file
      *
-     * @param  string $src
-     * @param  string $dest
-     * @throws Exception
+     * @param  array  $file
+     * @param  string $to
      * @return string
      */
-    public function upload($src, $dest)
+    public function upload($file, $to = null)
     {
-        if (!$this->overwrite) {
-            $dest = $this->checkFilename($dest);
+        $this->error = $file['error'];
+
+        if (null === $to) {
+            $to = $file['name'];
         }
 
-        $this->uploadedFile = $dest;
-        $dest = $this->uploadDir . DIRECTORY_SEPARATOR . $dest;
+        if (!$this->overwrite) {
+            $to = $this->checkFilename($to);
+        }
+
+        $this->uploadedFile = $to;
+        $to = $this->uploadDir . DIRECTORY_SEPARATOR . $to;
 
         // Move the uploaded file, creating a file object with it.
-        if (move_uploaded_file($src, $dest)) {
-            $fileSize  = filesize($dest);
-            $fileParts = pathinfo($dest);
+        if (move_uploaded_file($file['tmp_name'], $to)) {
+            $fileSize  = filesize($to);
+            $fileParts = pathinfo($to);
 
             $ext = (isset($fileParts['extension'])) ? $fileParts['extension'] : null;
 
-            // Check the file size requirement.
+            // Check the file size requirement
             if (($this->maxSize > 0) && ($fileSize > $this->maxSize)) {
-                unlink($dest);
-                throw new Exception('Error: The file uploaded is too big.');
+                unlink($to);
+                $this->error = self::UPLOAD_ERR_USER_SIZE;
+                return null;
+            // Check to see if the file is allowed
+            } else if ((null !== $ext) && (!$this->isAllowed($ext))) {
+                unlink($to);
+                $this->error = self::UPLOAD_ERR_NOT_ALLOWED;
+                return null;
+            // Else, return uploaded file.
+            } else {
+                return $this->uploadedFile;
             }
-
-            // Check to see if the file is an accepted file format.
-            if ((null !== $ext) && (!$this->isAllowed($ext))) {
-                unlink($dest);
-                throw new Exception('Error: The file type ' . strtoupper($ext) . ' is not an accepted file format.');
-            }
-
-            $this->success = true;
-            return $this->uploadedFile;
         } else {
-            throw new Exception('Error: There was an unexpected error in uploading the file.');
+            if ($this->error == UPLOAD_ERR_OK) {
+                $this->error = self::UPLOAD_ERR_UNEXPECTED;
+            }
         }
     }
 
