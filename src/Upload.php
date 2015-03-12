@@ -39,9 +39,19 @@ class Upload
     const UPLOAD_ERR_NOT_ALLOWED = 10;
 
     /**
+     * Upload directory does not exist
+     */
+    const UPLOAD_ERR_DIR_NOT_EXIST = 11;
+
+    /**
+     * Upload directory not writable
+     */
+    const UPLOAD_ERR_DIR_NOT_WRITABLE = 12;
+
+    /**
      * Unexpected error
      */
-    const UPLOAD_ERR_UNEXPECTED = 11;
+    const UPLOAD_ERR_UNEXPECTED = 13;
 
     /**
      * Error messageed
@@ -58,7 +68,9 @@ class Upload
         8  => 'A PHP extension stopped the file upload.',
         9  => 'The uploaded file exceeds the user-defined max file size.',
         10 => 'The uploaded file is not allowed.',
-        11 => 'Unexpected error.'
+        11 => 'The specified upload directory does not exist.',
+        12 => 'The specified upload directory is not writable.',
+        13 => 'Unexpected error.'
     ];
 
     /**
@@ -159,19 +171,17 @@ class Upload
      * Set the upload directory
      *
      * @param  string $dir
-     * @throws Exception
      * @return Upload
      */
     public function setUploadDir($dir)
     {
         // Check to see if the upload directory exists.
         if (!file_exists($dir)) {
-            throw new Exception('Error: The upload directory does not exist.');
+            $this->error = self::UPLOAD_ERR_DIR_NOT_EXIST;
         }
-
         // Check to see if the permissions are set correctly.
         if (!is_writable(dirname($dir))) {
-            throw new Exception('Error: The upload directory is not writable.');
+            $this->error = self::UPLOAD_ERR_DIR_NOT_WRITABLE;
         }
 
         $this->uploadDir = $dir;
@@ -440,53 +450,72 @@ class Upload
     }
 
     /**
+     * Test a file upload before moving it
+     *
+     * @param  array  $file
+     * @return boolean
+     */
+    public function test($file)
+    {
+        if ($this->error != 0) {
+            return false;
+        } else {
+            $this->error = $file['error'];
+
+            if ($this->error != 0) {
+                return false;
+            } else {
+                $fileSize  = $file['size'];
+                $fileParts = pathinfo($file['name']);
+                $ext       = (isset($fileParts['extension'])) ? $fileParts['extension'] : null;
+
+                if (($this->maxSize > 0) && ($fileSize > $this->maxSize)) {
+                    $this->error = self::UPLOAD_ERR_USER_SIZE;
+                    return false;
+                } else if ((null !== $ext) && (!$this->isAllowed($ext))) {
+                    $this->error = self::UPLOAD_ERR_NOT_ALLOWED;
+                    return false;
+                } else if ($this->error == 0) {
+                    return true;
+                } else {
+                    $this->error = self::UPLOAD_ERR_UNEXPECTED;
+                    return false;
+                }
+            }
+        }
+    }
+
+    /**
      * Upload file to the upload dir, returns the newly uploaded file
      *
      * @param  array  $file
      * @param  string $to
-     * @return string
+     * @return mixed
      */
     public function upload($file, $to = null)
     {
-        $this->error = $file['error'];
+        if ($this->test($file)) {
+            if (null === $to) {
+                $to = $file['name'];
+            }
+            if (!$this->overwrite) {
+                $to = $this->checkFilename($to);
+            }
 
-        if (null === $to) {
-            $to = $file['name'];
-        }
+            $this->uploadedFile = $to;
+            $to = $this->uploadDir . DIRECTORY_SEPARATOR . $to;
 
-        if (!$this->overwrite) {
-            $to = $this->checkFilename($to);
-        }
-
-        $this->uploadedFile = $to;
-        $to = $this->uploadDir . DIRECTORY_SEPARATOR . $to;
-
-        // Move the uploaded file, creating a file object with it.
-        if (move_uploaded_file($file['tmp_name'], $to)) {
-            $fileSize  = filesize($to);
-            $fileParts = pathinfo($to);
-
-            $ext = (isset($fileParts['extension'])) ? $fileParts['extension'] : null;
-
-            // Check the file size requirement
-            if (($this->maxSize > 0) && ($fileSize > $this->maxSize)) {
-                unlink($to);
-                $this->error = self::UPLOAD_ERR_USER_SIZE;
-                return null;
-            // Check to see if the file is allowed
-            } else if ((null !== $ext) && (!$this->isAllowed($ext))) {
-                unlink($to);
-                $this->error = self::UPLOAD_ERR_NOT_ALLOWED;
-                return null;
-            // Else, return uploaded file.
-            } else {
+            // Move the uploaded file, creating a file object with it.
+            if (move_uploaded_file($file['tmp_name'], $to)) {
                 return $this->uploadedFile;
+            } else {
+                $this->error = self::UPLOAD_ERR_UNEXPECTED;
+                return false;
             }
         } else {
-            if ($this->error == UPLOAD_ERR_OK) {
-                $this->error = self::UPLOAD_ERR_UNEXPECTED;
-            }
+            return false;
         }
+
     }
 
 }
