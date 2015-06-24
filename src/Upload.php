@@ -337,6 +337,16 @@ class Upload
     }
 
     /**
+     * Get the disallowed file types
+     *
+     * @return array
+     */
+    public function getDisallowedTypes()
+    {
+        return $this->disallowedTypes;
+    }
+
+    /**
      * Get the allowed file types
      *
      * @return array

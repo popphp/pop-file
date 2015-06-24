@@ -85,7 +85,7 @@ class Dir
     public function __construct($dir, $full = false, $rec = false, $dirs = true)
     {
         // Check to see if the directory exists.
-        if (!file_exists(dirname($dir))) {
+        if (!file_exists($dir)) {
             throw new Exception('Error: The directory does not exist.');
         }
 
