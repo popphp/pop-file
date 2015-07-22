@@ -45,7 +45,7 @@ if ($upload->isSuccess()) {
 
 The above code creates the upload object, sets the upload path and sets the basic defaults,
 which includes a max file size of 10MBs, and an array of allowed common file types as well
-as an array of common disallowed file types. The `upload()` method returns false 
+as an array of common disallowed file types.
 
 ##### File upload overwrites
 
