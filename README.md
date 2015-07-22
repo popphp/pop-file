@@ -66,8 +66,8 @@ $upload->upload($_FILES['file_upload'], 'my-custom-filename.docx');
 ```
 
 And if you need to check for a duplicate filename first, you can use the `checkFilename`
-method. If the filename exists, it will append a '_1' to the end of the filename, or loop
-through until it finds a number that doesn't exist yet (_#). If the filename doesn't
+method. If the filename exists, it will append a '\_1' to the end of the filename, or loop
+through until it finds a number that doesn't exist yet (\_#). If the filename doesn't
 exist yet, it returns the original name.
 
 ```php
@@ -108,7 +108,7 @@ The four parameters above are:
 * The directory
 * Full path flag
 * Recursive flag
-* Flag to not include other directories
+* Flag to not include only files but not directories
 
 ##### Emptying a directory
 
