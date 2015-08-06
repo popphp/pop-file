@@ -174,11 +174,10 @@ class Upload
     public function setUploadDir($dir)
     {
         // Check to see if the upload directory exists.
-        if (!file_exists($dir)) {
+        if (!file_exists($dir) || !is_dir($dir)) {
             $this->error = self::UPLOAD_ERR_DIR_NOT_EXIST;
-        }
         // Check to see if the permissions are set correctly.
-        if (!is_writable(dirname($dir))) {
+        } else if (!is_writable($dir)) {
             $this->error = self::UPLOAD_ERR_DIR_NOT_WRITABLE;
         }
 
