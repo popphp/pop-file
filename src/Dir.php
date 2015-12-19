@@ -91,21 +91,6 @@ class Dir
             throw new Exception('Error: The directory does not exist.');
         }
 
-        $this->tree[realpath($dir)] = $this->buildTree(new \DirectoryIterator($dir));
-
-        if (isset($options['absolute'])) {
-            $this->setAbsolute($options['absolute']);
-        }
-        if (isset($options['relative'])) {
-            $this->setRelative($options['relative']);
-        }
-        if (isset($options['recursive'])) {
-            $this->setRecursive($options['recursive']);
-        }
-        if (isset($options['filesOnly'])) {
-            $this->setFilesOnly($options['filesOnly']);
-        }
-
         // Set the directory path.
         if ((strpos($dir, '/') !== false) && (DIRECTORY_SEPARATOR != '/')) {
             $this->path = str_replace('/', "\\", $dir);
@@ -120,82 +105,21 @@ class Dir
             $this->path = substr($this->path, 0, -1);
         }
 
-        // If the recursive flag is passed, traverse recursively.
-        if ($this->recursive) {
-            $objects = new \RecursiveIteratorIterator(
-                new \RecursiveDirectoryIterator($this->path), \RecursiveIteratorIterator::SELF_FIRST
-            );
-            foreach ($objects as $fileInfo) {
-                if (($fileInfo->getFilename() != '.') && ($fileInfo->getFilename() != '..')) {
-                    $this->objects[] = $fileInfo;
-                    // If absolute path flag was passed, store the absolute path.
-                    if ($this->absolute) {
-                        $f = null;
-                        if (!$this->filesOnly) {
-                            $f = ($fileInfo->isDir()) ? (realpath($fileInfo->getPathname())) : realpath($fileInfo->getPathname());
-                        } else if (!$fileInfo->isDir()) {
-                            $f = realpath($fileInfo->getPathname());
-                        }
-                        if (($f !== false) && (null !== $f)) {
-                            $this->files[] = $f;
-                        }
-                    // If relative path flag was passed, store the relative path.
-                    } else if ($this->relative) {
-                        $f = null;
-                        if (!$this->filesOnly) {
-                            $f = ($fileInfo->isDir()) ? (realpath($fileInfo->getPathname())) : realpath($fileInfo->getPathname());
-                        } else if (!$fileInfo->isDir()) {
-                            $f = realpath($fileInfo->getPathname());
-                        }
-                        if (($f !== false) && (null !== $f)) {
-                            $this->files[] = substr($f, (strlen(realpath($this->path)) + 1));
-                        }
-                    // Else, store only the directory or file name.
-                    } else {
-                        if (!$this->filesOnly) {
-                            $this->files[] = ($fileInfo->isDir()) ? ($fileInfo->getFilename()) : $fileInfo->getFilename();
-                        } else if (!$fileInfo->isDir()) {
-                            $this->files[] = $fileInfo->getFilename();
-                        }
-                    }
-                }
-            }
-        // Else, only traverse the single directory that was passed.
-        } else {
-            foreach (new \DirectoryIterator($this->path) as $fileInfo) {
-                if(!$fileInfo->isDot()) {
-                    $this->objects[] = $fileInfo;
-                    // If absolute path flag was passed, store the absolute path.
-                    if ($this->absolute) {
-                        if (!$this->filesOnly) {
-                            $f = ($fileInfo->isDir()) ?
-                                ($this->path . DIRECTORY_SEPARATOR . $fileInfo->getFilename() . DIRECTORY_SEPARATOR) :
-                                ($this->path . DIRECTORY_SEPARATOR . $fileInfo->getFilename());
-                        } else if (!$fileInfo->isDir()) {
-                            $f = $this->path . DIRECTORY_SEPARATOR . $fileInfo->getFilename();
-                        }
-                        $this->files[] = $f;
-                    // If relative path flag was passed, store the relative path.
-                    } else if ($this->relative) {
-                        if (!$this->filesOnly) {
-                            $f = ($fileInfo->isDir()) ?
-                                ($this->path . DIRECTORY_SEPARATOR . $fileInfo->getFilename() . DIRECTORY_SEPARATOR) :
-                                ($this->path . DIRECTORY_SEPARATOR . $fileInfo->getFilename());
-                        } else if (!$fileInfo->isDir()) {
-                            $f = $this->path . DIRECTORY_SEPARATOR . $fileInfo->getFilename();
-                        }
-                        $this->files[] = substr($f, (strlen(realpath($this->path)) + 1));
-                    // Else, store only the directory or file name.
-                    } else {
-                        if (!$this->filesOnly) {
-                            $this->files[] = ($fileInfo->isDir()) ? ($fileInfo->getFilename()) : $fileInfo->getFilename();
-                        } else if (!$fileInfo->isDir()) {
-                            $this->files[] = $fileInfo->getFilename();
-                        }
-                    }
-                }
-            }
+        if (isset($options['absolute'])) {
+            $this->setAbsolute($options['absolute']);
         }
+        if (isset($options['relative'])) {
+            $this->setRelative($options['relative']);
+        }
+        if (isset($options['recursive'])) {
+            $this->setRecursive($options['recursive']);
+        }
+        if (isset($options['filesOnly'])) {
+            $this->setFilesOnly($options['filesOnly']);
+        }
+
+        $this->tree[realpath($this->path)] = $this->buildTree(new \DirectoryIterator($this->path));
+        $this->traverse();
     }
 
     /**
@@ -207,6 +131,9 @@ class Dir
     public function setAbsolute($absolute)
     {
         $this->absolute = (bool)$absolute;
+        if (($this->absolute) && ($this->isRelative())) {
+            $this->setRelative(false);
+        }
         return $this;
     }
 
@@ -219,6 +146,9 @@ class Dir
     public function setRelative($relative)
     {
         $this->relative = (bool)$relative;
+        if (($this->relative) && ($this->isAbsolute())) {
+            $this->setAbsolute(false);
+        }
         return $this;
     }
 
@@ -244,6 +174,46 @@ class Dir
     {
         $this->filesOnly = (bool)$filesOnly;
         return $this;
+    }
+
+    /**
+     * Is absolute
+     *
+     * @return boolean
+     */
+    public function isAbsolute()
+    {
+        return $this->absolute;
+    }
+
+    /**
+     * Is relative
+     *
+     * @return boolean
+     */
+    public function isRelative()
+    {
+        return $this->relative;
+    }
+
+    /**
+     * Is recursive
+     *
+     * @return boolean
+     */
+    public function isRecursive()
+    {
+        return $this->recursive;
+    }
+
+    /**
+     * Is files only
+     *
+     * @return boolean
+     */
+    public function isFilesOnly()
+    {
+        return $this->filesOnly;
     }
 
     /**
@@ -354,6 +324,97 @@ class Dir
         // If the delete flag was passed, remove the top level directory.
         if ($remove) {
             @rmdir($path);
+        }
+    }
+
+    /**
+     * Traverse the directory
+     *
+     * @return void
+     */
+    public function traverse()
+    {
+        // If the recursive flag is passed, traverse recursively.
+        if ($this->recursive) {
+            $objects = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($this->path), \RecursiveIteratorIterator::SELF_FIRST
+            );
+            foreach ($objects as $fileInfo) {
+                if (($fileInfo->getFilename() != '.') && ($fileInfo->getFilename() != '..')) {
+                    $this->objects[] = $fileInfo;
+                    // If absolute path flag was passed, store the absolute path.
+                    if ($this->absolute) {
+                        $f = null;
+                        if (!$this->filesOnly) {
+                            $f = ($fileInfo->isDir()) ? (realpath($fileInfo->getPathname())) : realpath($fileInfo->getPathname());
+                        } else if (!$fileInfo->isDir()) {
+                            $f = realpath($fileInfo->getPathname());
+                        }
+                        if (($f !== false) && (null !== $f)) {
+                            $this->files[] = $f;
+                        }
+                    // If relative path flag was passed, store the relative path.
+                    } else if ($this->relative) {
+                        $f = null;
+                        if (!$this->filesOnly) {
+                            $f = ($fileInfo->isDir()) ? (realpath($fileInfo->getPathname())) : realpath($fileInfo->getPathname());
+                        } else if (!$fileInfo->isDir()) {
+                            $f = realpath($fileInfo->getPathname());
+                        }
+                        if (($f !== false) && (null !== $f)) {
+                            $this->files[] = substr($f, (strlen(realpath($this->path)) + 1));
+                        }
+                    // Else, store only the directory or file name.
+                    } else {
+                        if (!$this->filesOnly) {
+                            $this->files[] = ($fileInfo->isDir()) ? ($fileInfo->getFilename()) : $fileInfo->getFilename();
+                        } else if (!$fileInfo->isDir()) {
+                            $this->files[] = $fileInfo->getFilename();
+                        }
+                    }
+                }
+            }
+            // Else, only traverse the single directory that was passed.
+        } else {
+            foreach (new \DirectoryIterator($this->path) as $fileInfo) {
+                if(!$fileInfo->isDot()) {
+                    $this->objects[] = $fileInfo;
+                    // If absolute path flag was passed, store the absolute path.
+                    if ($this->absolute) {
+                        $f = null;
+                        if (!$this->filesOnly) {
+                            $f = ($fileInfo->isDir()) ?
+                                ($this->path . DIRECTORY_SEPARATOR . $fileInfo->getFilename() . DIRECTORY_SEPARATOR) :
+                                ($this->path . DIRECTORY_SEPARATOR . $fileInfo->getFilename());
+                        } else if (!$fileInfo->isDir()) {
+                            $f = $this->path . DIRECTORY_SEPARATOR . $fileInfo->getFilename();
+                        }
+                        if (($f !== false) && (null !== $f)) {
+                            $this->files[] = $f;
+                        }
+                    // If relative path flag was passed, store the relative path.
+                    } else if ($this->relative) {
+                        $f = null;
+                        if (!$this->filesOnly) {
+                            $f = ($fileInfo->isDir()) ?
+                                ($this->path . DIRECTORY_SEPARATOR . $fileInfo->getFilename() . DIRECTORY_SEPARATOR) :
+                                ($this->path . DIRECTORY_SEPARATOR . $fileInfo->getFilename());
+                        } else if (!$fileInfo->isDir()) {
+                            $f = $this->path . DIRECTORY_SEPARATOR . $fileInfo->getFilename();
+                        }
+                        if (($f !== false) && (null !== $f)) {
+                            $this->files[] = substr($f, (strlen(realpath($this->path)) + 1));
+                        }
+                    // Else, store only the directory or file name.
+                    } else {
+                        if (!$this->filesOnly) {
+                            $this->files[] = ($fileInfo->isDir()) ? ($fileInfo->getFilename()) : $fileInfo->getFilename();
+                        } else if (!$fileInfo->isDir()) {
+                            $this->files[] = $fileInfo->getFilename();
+                        }
+                    }
+                }
+            }
         }
     }
 
