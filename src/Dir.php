@@ -148,7 +148,7 @@ class Dir
                             $f = realpath($fileInfo->getPathname());
                         }
                         if (($f !== false) && (null !== $f)) {
-                            $this->files[] = substr($f, strlen(realpath($this->path)));
+                            $this->files[] = substr($f, (strlen(realpath($this->path)) + 1));
                         }
                     // Else, store only the directory or file name.
                     } else {
@@ -184,7 +184,7 @@ class Dir
                         } else if (!$fileInfo->isDir()) {
                             $f = $this->path . DIRECTORY_SEPARATOR . $fileInfo->getFilename();
                         }
-                        $this->files[] = substr($f, strlen(realpath($this->path)));
+                        $this->files[] = substr($f, (strlen(realpath($this->path)) + 1));
                     // Else, store only the directory or file name.
                     } else {
                         if (!$this->filesOnly) {
