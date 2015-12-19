@@ -96,19 +96,22 @@ If you want to traverse the directory recursively and get the full path of each 
 ```php
 use Pop\File\Dir;
 
-$dir = new Dir('my-dir', true, true, false);
+$dir = new Dir('my-dir', [
+    'absolute'  => true,
+    'recursive' => true
+]);
 
 foreach ($dir->getFiles() as $file) {
     echo $file;
 }
 ```
 
-The four parameters above are:
+The available boolean options for the `$options` array parameter are:
 
-* The directory
-* Full path flag
-* Recursive flag
-* Flag to not include only files but not directories
+* 'absolute'  => store the absolute, full path of the items in the directory
+* 'relative'  => store the relative path of the items in the directory
+* 'recursive' => traverse the directory recursively
+* 'filesOnly' => store only files in the object (and not other directories)
 
 ##### Emptying a directory
 
