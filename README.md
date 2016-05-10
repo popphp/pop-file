@@ -2,7 +2,7 @@ pop-file
 ========
 
 [![Build Status](https://travis-ci.org/popphp/pop-file.svg?branch=master)](https://travis-ci.org/popphp/pop-file)
-[![Coverage Status](http://www.popphp.org/cc/coverage.php?comp=pop-file)](http://www.popphp.org/cc/pop-file/)
+[![Coverage Status](http://cc.popphp.org/coverage.php?comp=pop-file)](http://cc.popphp.org/pop-file/)
 
 OVERVIEW
 --------
