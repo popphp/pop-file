@@ -1,6 +1,14 @@
 pop-file
 ========
 
+END OF LIFE
+-----------
+The `pop-file` component v2.1.0 is now end-of-life. The upload and dir sub-components have
+been forked and pushed into other repositories, respectively:
+
+* popphp/pop-http (now the Pop\Http\Upload class)
+* popphp/pop-dir (now the Pop\Dir\Dir class)
+
 [![Build Status](https://travis-ci.org/popphp/pop-file.svg?branch=master)](https://travis-ci.org/popphp/pop-file)
 [![Coverage Status](http://cc.popphp.org/coverage.php?comp=pop-file)](http://cc.popphp.org/pop-file/)
 
